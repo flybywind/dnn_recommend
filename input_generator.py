@@ -14,6 +14,12 @@ class HDFSBatchReader(utils.Sequence):
                  feature_index_map_path,
                  timeout = 1800, 
                  path_fmt = "part-%05d"):
+        '''
+        path: 输入的hdfs路径，下面的part以 path_fmt `part-00000`这种格式命名
+        其中，第一列必须是 1:vid#2017091712345 这种形式，1表示target，冒号后面
+        表示要预测的下一个视频。如果target == 1表示用户对这个视频兴趣很大（比如播放
+        完成率大于50%，或者30s等等评定方法），如果target == 0表示用户不感兴趣
+        '''
         # todo: Add weights names
         self.path_base = path
         # batch_size 就等于hdfs的part_num
@@ -68,7 +74,9 @@ class HDFSBatchReader(utils.Sequence):
                 if len(seg) < 2:
                     continue
                 ids = defaultdict(list)
-                y = float(seg[0])
+                p = seg[0].split(":")
+                y = float(p[0])
+                next_item = p[1] # 下一个将观看的视频(item)
                 targets.append(y)
                 for p in seg[1:]:
                     # 都是one-hot 特征
@@ -78,6 +86,9 @@ class HDFSBatchReader(utils.Sequence):
                 inputs = {}
                 for grp in ids.keys():
                     inputs[grp] = np.asarray(ids[grp], dtype='int64')
+                feature = next_item 
+                grp = self._get_feature_group(feature)
+                ids[grp+"-0"].append(self._get_feature_id(feature))
                 batch_inputs.append(inputs)
             pp.stdout.close()
             return batch_inputs, targets

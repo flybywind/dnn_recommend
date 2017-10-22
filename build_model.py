@@ -1,7 +1,7 @@
 # -*- encoding: utf8 -*- 
 from keras.engine import Model
 # from keras.models import Sequential
-from keras.layers import Dense, Input, Embedding, Concatenate, Dot
+from keras.layers import Activation, Dense, Input, Embedding, Concatenate, Dot
 from ReduceAverage import ReduceAverage
 from keras import optimizers
 from keras import losses
@@ -34,7 +34,8 @@ def build_dnn(each_inputs_max_dim, emb_dim, item_name, dense_layers):
     item_input = Input(shape = (1,), name = item_name + "-0")
     inputs.append(item_input)
     item_emb = item_layer(item_input)
-    out = Dot(1)([user_emb, item_emb])
+    out = Activation(activation = "sigmoid")(
+            Dot(1)([user_emb, item_emb]))
     model = Model(inputs, out)
     ada_grad = optimizers.Adagrad()
     model.compile(optimizer=ada_grad, loss = losses.binary_crossentropy)
